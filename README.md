@@ -7,16 +7,27 @@ endpoint) rewrites it into a clearer prompt tuned for the model that will answer
 it writes N candidates in parallel and one extra judge call picks the best one. Your chat still shows
 exactly what you typed; the optimized version is shown to you separately and never appears in the reply.
 
-## Contents
+## Layout
 
-| File                  | Purpose                                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `plugin.yaml`         | Plugin manifest (name, version, `pre_llm_call` hook).                                                         |
-| `__init__.py`         | The hook, optimizer + judge, history, and the `/optimized` command.                                           |
-| `config.yaml.example` | Settings template. Hermes copies it to `config.yaml` on install; your copy is never committed or overwritten. |
-| `after-install.md`    | Next steps Hermes prints after `hermes plugins install`.                                                      |
-| `desktop/plugin.js`   | Desktop-app banner above the composer (optional).                                                             |
-| `test_optimizer.py`   | Self-check (no network, no real model calls).                                                                 |
+```text
+hermes-prompt-optimizer/
+├── plugin.yaml              manifest: name, version, the pre_llm_call hook
+├── __init__.py              register(): wires the hook and /optimized into Hermes
+├── config.yaml.example      settings template, copied to config.yaml on install
+├── after-install.md         next steps printed by `hermes plugins install`
+├── optimizer/               the Python half
+│   ├── config.py            config.yaml loading, per-model prompt pick
+│   ├── engine.py            parallel optimizer calls + the judge
+│   ├── history.py           recent results per chat (read by /optimized and the banner)
+│   └── hook.py              the pre_llm_call hook, skip rules, /optimized
+├── desktop/
+│   └── plugin.js            the desktop half: banner above the composer (optional)
+└── tests/
+    └── test_optimizer.py    self-check, no network
+```
+
+The top-level files are where Hermes looks for them: `plugin.yaml` and `__init__.py` to load the
+plugin, `after-install.md` and `*.example` on install, `desktop/plugin.js` for the desktop half.
 
 ## How it works
 
@@ -76,8 +87,9 @@ optimized; there is just no banner.
 
 ## Requirements
 
-- Hermes Agent with plugin support (the plugin uses Hermes' own client stack, `call_llm`, so every
-  provider, custom endpoint and credential pool Hermes knows about works).
+- Hermes Agent v0.20.1 or newer. Models are called through Hermes' own client stack (`call_llm`),
+  so every provider, custom endpoint and credential pool Hermes knows about works; v0.20.1 added
+  the `route_info` the plugin uses to catch a silent fallback to your main model.
 - An optimizer model you can reach. The template points at a local Ollama server
   (`qwen2.5:7b` on `http://127.0.0.1:11434/v1`); **change `model:` to your own before use.**
 - No extra Python packages (only `pyyaml`, already in Hermes' venv).
@@ -117,6 +129,8 @@ optimized; there is just no banner.
 
 - Update: `hermes plugins update hermes-prompt-optimizer`. Your `config.yaml` is kept; new keys in
   `config.yaml.example` fall back to built-in defaults until you copy them over.
+- Reinstall: `hermes plugins install … --force` replaces the whole folder, `config.yaml` included,
+  so copy your `config.yaml` somewhere else first.
 - Disable: `hermes plugins disable hermes-prompt-optimizer`
 - Remove: `hermes plugins remove hermes-prompt-optimizer`, plus
   `$HERMES_HOME/plugin-data/hermes-prompt-optimizer/` if you want the history gone.
@@ -172,8 +186,8 @@ The self-check uses fake model calls and a temporary `HERMES_HOME`, so it touche
 
 ```bash
 git clone https://github.com/cosminfuica/hermes-prompt-optimizer && cd hermes-prompt-optimizer
-~/.hermes/hermes-agent/venv/bin/python test_optimizer.py    # prints "ok: all self-checks passed"
-hermes plugins doctor .                                      # manifest, import and registration
+~/.hermes/hermes-agent/venv/bin/python tests/test_optimizer.py   # prints "ok: all self-checks passed"
+hermes plugins doctor . --ci                                    # manifest, import and registration
 ```
 
 The warnings printed during the self-check are expected: they come from the bad-config and

@@ -1,5 +1,5 @@
 name: hermes-prompt-optimizer
-version: 1.0.0
+version: 1.0.1
 description: "A small model rewrites each message before your Hermes model answers it (optional N candidates + judge); the optimized prompt is shown to you, never in the reply."
 author: cosminfuica
 license: MIT

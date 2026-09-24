@@ -51,7 +51,7 @@ export function Banner() {
     queryFn: () => fetchLatest(sessionId),
     enabled: Boolean(sessionId),
     // ponytail: polls only while a turn runs; a push event would need a core hook-to-UI channel
-    refetchInterval: busy ? 2000 : false
+    refetchInterval: busy ? 3000 : false // the SDK guide: don't poll host.request faster than a few seconds
   })
 
   if (!data || data.id === dismissed || (data.status === 'running' && !busy)) {
