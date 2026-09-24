@@ -1,0 +1,4 @@
+# Personal settings: created from config.yaml.example on install, never committed.
+config.yaml
+__pycache__/
+*.pyc

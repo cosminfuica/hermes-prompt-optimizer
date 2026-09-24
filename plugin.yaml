@@ -1,0 +1,9 @@
+name: hermes-prompt-optimizer
+version: 1.0.0
+description: "A small model rewrites each message before your Hermes model answers it (optional N candidates + judge); the optimized prompt is shown to you, never in the reply."
+author: cosminfuica
+license: MIT
+homepage: https://github.com/cosminfuica/hermes-prompt-optimizer
+tags: [prompt, optimizer, pre_llm_call, desktop]
+provides_hooks:
+  - pre_llm_call

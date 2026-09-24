@@ -1,0 +1,90 @@
+# hermes-prompt-optimizer settings (template).
+# `hermes plugins install` copies this file to config.yaml inside the installed plugin folder.
+# Edit that config.yaml, not this file; `hermes plugins update` never overwrites it.
+# Saved changes apply to your next message — no restart needed.
+
+enabled: true
+
+# Optimized candidates generated per message.
+#   1   → one optimizer call; its output is used directly.
+#   N>1 → N parallel optimizer calls + 1 judge call that picks the best one (N+1 calls, max 5).
+rounds: 1
+
+# The optimizer model — any Hermes provider or any OpenAI-compatible endpoint:
+#   base_url: http://host:port/v1   → custom endpoint (provider is then ignored)
+#   provider: auto (or empty)       → your main Hermes provider; `model` picks the model on it
+#   provider: openrouter | anthropic | nous | …  → uses the credentials Hermes already has
+#   provider: "custom:<name>"       → a named entry from custom_providers in Hermes' config.yaml
+# api_key_env = NAME of an environment variable holding the key (put the secret in ~/.hermes/.env).
+# Left empty, a base_url that matches one of your custom_providers reuses that entry's key; any
+# other base_url is called without a key (set api_key_env: OPENAI_API_KEY if it needs that one).
+# If the optimizer model can't be reached, your message is sent as typed (never rewritten by the
+# main model instead).
+model:
+  provider: ""
+  model: qwen2.5:7b                     # CHANGE ME: your optimizer model
+  base_url: http://127.0.0.1:11434/v1   # CHANGE ME: e.g. a local Ollama server; "" to use `provider`
+  api_key_env: ""
+  temperature: 0.5
+  max_tokens: 1500
+  timeout: 20        # seconds per call. The whole optimization must also fit in Hermes'
+                     # plugins.hook_callback_timeout (default 30s) or Hermes sends your original
+                     # message. For rounds > 1 or slow models:
+                     #   hermes config set plugins.hook_callback_timeout 90
+
+# Optional different model for the judge (only used when rounds > 1). Unset keys inherit `model`.
+judge_model: {}
+
+min_chars: 12          # shorter messages ("ok", "yes do it") are sent untouched
+max_chars: 6000        # longer ones too (big pastes would get truncated by the rewrite)
+context_messages: 4    # recent chat messages the optimizer sees, so "fix it" resolves correctly
+show_in_cli: true      # print the optimized prompt in the classic CLI
+
+prompts:
+  # Placeholders: {target_model} = the Hermes model that will answer, {base} = the default prompt.
+  default: |
+    You are a prompt optimizer. You rewrite a user's chat message into a clearer, more effective prompt for {target_model}, an AI assistant that has tools (terminal, files, web, code). You never answer or perform the request yourself.
+
+    Rules:
+    - Preserve the user's intent exactly. Never add goals, requirements or assumptions the user did not state or clearly imply, and never drop any.
+    - Copy every concrete detail verbatim: file paths, code, commands, error messages, numbers, names, URLs, quoted text.
+    - Keep the user's language and voice (first person, addressed to the assistant). Do not translate.
+    - Make it clear and direct: lead with the goal, then the relevant context, constraints and the expected result or format — only the parts the message actually supports.
+    - Use <conversation_context> only to resolve references ("it", "that file", "do the same"); do not copy it into the prompt otherwise.
+    - Match length to the task: a short question stays short. Remove filler and politeness padding; do not add ceremony.
+    - If the message is already clear, is small talk, or is a short reply (yes / no / thanks / continue), return it unchanged.
+    - Output ONLY the rewritten prompt: no preamble, no quotes, no code fences, no explanation.
+
+  # Per-target-model prompts. Keys are comma-separated globs matched (case-insensitive) against the
+  # name of the model that will answer; the first match wins, no match → default.
+  # Keep {base} to extend the default prompt, drop it to replace the default entirely.
+  per_model:
+    "*claude*, anthropic/*": |
+      {base}
+
+      The target is a Claude model (Anthropic guidance):
+      - Be explicit about the desired outcome and scope; Claude follows instructions precisely rather than guessing intent.
+      - Give the reason behind non-obvious constraints; context improves how Claude applies them.
+      - Phrase instructions as what to do, not only what to avoid.
+      - For multi-part prompts, separate the parts with XML tags such as <context>, <task>, <constraints>, <output_format>. Keep one-line requests as plain text.
+    "*gpt*, *codex*, openai/*": |
+      {base}
+
+      The target is an OpenAI GPT model (OpenAI guidance):
+      - Give precise, explicit instructions: exactly what to produce and any hard requirements.
+      - For multi-part prompts use short Markdown sections (# Goal, # Context, # Constraints, # Output) and wrap pasted data or code in XML-style tags.
+      - For reasoning-heavy or agentic tasks, state the goal, the constraints and what "done" looks like; do not prescribe step-by-step reasoning.
+    "*gemini*, *gemma*, google/*": |
+      {base}
+
+      The target is a Gemini model (Google guidance):
+      - Be precise and direct; define any ambiguous terms.
+      - Put constraints and the required output format first. If the message contains long pasted material, put that material first and the specific question last ("Based on the material above, …").
+      - Use one delimiter style consistently (XML tags or Markdown headings), never both.
+      - State the desired verbosity explicitly when it matters.
+
+  # Judge prompt (rounds > 1). It receives the original message and the numbered candidates.
+  judge: |
+    You compare candidate rewrites of a user's message and pick the one that will get the best result from {target_model}.
+    Judge by: 1) fidelity — keeps every requirement and detail of the original and adds nothing unstated; 2) clarity and structure; 3) concision. Fidelity outweighs everything else.
+    Reply with only the number of the best candidate.
