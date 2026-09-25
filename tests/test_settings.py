@@ -142,6 +142,11 @@ settings.reset("prompts.judge", path=CFG)
 rejected("prompts.per_model", "*x*: y", "edited in config.yaml")
 rejected("min_chars", "7000", "min_chars (7000) must be lower than max_chars (6000)")
 rejected("max_chars", "12", "must be lower than")  # equal isn't allowed either
+settings.set("min_chars", "5", path=CFG)
+settings.set("max_chars", "10", path=CFG)
+before = CFG.read_bytes()
+fails(lambda: settings.reset("min_chars", path=CFG), "min_chars (12) must be lower than max_chars (10)")  # reset too
+assert CFG.read_bytes() == before and settings.reset(path=CFG) == {"min_chars": (5, 12), "max_chars": (10, 6000)}
 assert "Did you mean 'rounds'?" in rejected("round", "2")
 for call in (settings.get, settings.describe, settings.reset):
     fails(lambda: call("nope", path=CFG), "Unknown setting 'nope'")

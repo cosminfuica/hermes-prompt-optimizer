@@ -163,7 +163,10 @@ def _reset(arg: str, path: Path) -> str:
         return "\n".join([f"Reset {len(changed)} setting(s) to their defaults:", *_changes(changed), LIVE])
     if arg:
         key = _key(arg)
-        changed = settings.reset(key, path=path)
+        try:
+            changed = settings.reset(key, path=path)
+        except ConfigError as exc:  # nothing was written
+            return f"Not reset: {exc}"
         if not changed:
             return f"{key} already has its default value."
         return "\n".join([f"Reset {key}: {fmt(changed[key][0])} → {fmt(changed[key][1])}. {LIVE}",

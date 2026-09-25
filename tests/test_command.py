@@ -145,6 +145,11 @@ assert "Type /optimizer reset all to confirm" in preview and saved("context_mess
 assert run("reset ALL").startswith("Reset 2 setting(s) to their defaults:\n")
 assert CFG.read_text(encoding="utf-8") == TEMPLATE  # judge_model back to {}, byte for byte
 assert run("reset") == run("reset all") == "All settings already have their default values."
+run("min_chars 5")
+run("max_chars 10")
+before = CFG.read_bytes()
+assert run("reset min_chars") == "Not reset: min_chars (12) must be lower than max_chars (10)."  # never min >= max
+assert CFG.read_bytes() == before
 
 assert "/optimizer reset all" in run("help") and str(CFG) in run("help")
 

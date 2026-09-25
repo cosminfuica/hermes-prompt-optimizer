@@ -101,10 +101,7 @@ def defaults(path: Path = CONFIG_PATH) -> dict:
 def set(key: str, raw_value: Any, path: Path = CONFIG_PATH) -> tuple:  # noqa: A001 (name from the spec)
     value = _parse(key, _spec(key), raw_value)
     old = get(key, path)
-    if key in ("min_chars", "max_chars"):
-        span = {**normalize(_load(path)[0]), key: value}  # the template's values while config.yaml is missing
-        if span["min_chars"] >= span["max_chars"]:
-            raise ConfigError(f"min_chars ({span['min_chars']}) must be lower than max_chars ({span['max_chars']}).")
+    _check_span(path, {key: value})
     _save(path, {key: value})
     return old, value
 
@@ -122,6 +119,7 @@ def reset(key: Optional[str] = None, path: Path = CONFIG_PATH) -> dict:
     for k in keys:  # the template's own nodes, so its quoting, blocks and inner comments come back too
         node = _dig(doc, k)
         nodes[k] = PlainScalarString(node) if type(node) is str else node  # else ruamel keeps the old quotes
+    _check_span(path, {k: _dig(data, k) for k in keys})
     _save(path, {k: _dig(data, k) for k in keys}, nodes)
     after = get_all(path)
     return {k: (before[k], after[k]) for k in keys if before[k] != after[k]}
@@ -169,6 +167,15 @@ def _spec(key: str) -> Setting:
         return SETTINGS[key]
     close = difflib.get_close_matches(str(key), list(SETTINGS), n=1)
     raise ConfigError(f"Unknown setting {key!r}." + (f" Did you mean {close[0]!r}?" if close else ""))
+
+
+def _check_span(path: Path, changes: dict) -> None:
+    """min_chars must stay below max_chars after `changes`, or every message would be skipped.
+    Shared by set() and reset(), so no write path can save an impossible pair."""
+    if {"min_chars", "max_chars"} & changes.keys():
+        span = {**normalize(_load(path)[0]), **changes}  # the template's values while config.yaml is missing
+        if span["min_chars"] >= span["max_chars"]:
+            raise ConfigError(f"min_chars ({span['min_chars']}) must be lower than max_chars ({span['max_chars']}).")
 
 
 def _parse(key: str, spec: Setting, raw: Any) -> Any:
