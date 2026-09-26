@@ -162,7 +162,7 @@ assert hook.skip_reason(CFG, [{"type": "text", "text": "image turn"}]) == "non-t
 assert hook.skip_reason(CFG, "refactor the parser module", platform="desktop") == ""
 
 
-# register() wires one hook and one command; from here on the plugin is driven through them.
+# register() wires one hook and two commands; from here on the plugin is driven through them.
 class Ctx:
     def __init__(self):
         self.hooks, self.commands = {}, {}
@@ -176,7 +176,7 @@ class Ctx:
 
 ctx = Ctx()
 plugin.register(ctx)
-assert list(ctx.hooks) == ["pre_llm_call"] and list(ctx.commands) == ["optimized"]
+assert list(ctx.hooks) == ["pre_llm_call"] and list(ctx.commands) == ["optimized", "optimizer"]
 on_pre_llm_call, optimized = ctx.hooks["pre_llm_call"], ctx.commands["optimized"]
 
 # Hook end to end (LLM faked): context injected, original untouched, history + /optimized feed.

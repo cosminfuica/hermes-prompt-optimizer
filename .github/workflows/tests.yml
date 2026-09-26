@@ -1,0 +1,41 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  self-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest Hermes release the plugin supports (v0.20.1) and a current one.
+        hermes: [v2026.8.13, v2026.9.24]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.13"  # the uv Hermes' own CI pins
+      - name: Install Hermes ${{ matrix.hermes }}
+        # Hermes' own install path: its source plus `uv sync --locked`, the hash-pinned dependency set.
+        run: |
+          git clone --quiet --depth 1 --branch ${{ matrix.hermes }} https://github.com/NousResearch/hermes-agent "$RUNNER_TEMP/hermes"
+          cd "$RUNNER_TEMP/hermes" && uv sync --locked --quiet
+          echo "$RUNNER_TEMP/hermes/.venv/bin" >> "$GITHUB_PATH"
+      - name: Self-checks
+        run: |
+          for t in tests/test_*.py; do
+            echo "::group::$t"
+            python "$t"
+            echo "::endgroup::"
+          done
+      - name: hermes plugins doctor
+        env:
+          HERMES_HOME: ${{ runner.temp }}/hermes-home
+        run: hermes plugins doctor . --ci

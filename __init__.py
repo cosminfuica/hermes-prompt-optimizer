@@ -9,6 +9,7 @@ This file only wires the plugin into Hermes; the code lives in optimizer/, the s
 config.yaml (created from config.yaml.example on install).
 """
 
+from .optimizer.command import optimizer_command
 from .optimizer.hook import command, on_pre_llm_call
 
 
@@ -16,3 +17,6 @@ def register(ctx) -> None:
     ctx.register_hook("pre_llm_call", on_pre_llm_call)
     ctx.register_command("optimized", command, description="Show the last optimized prompt",
                          args_hint="[session_id]")
+    # No argument_mode: that parameter only exists since Hermes v0.21.0 and would break v0.20.x.
+    ctx.register_command("optimizer", optimizer_command, description="View and change prompt-optimizer settings",
+                         args_hint="[show|set <key> <value>|reset [key]|on|off|help]")
