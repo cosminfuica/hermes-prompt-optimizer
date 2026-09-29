@@ -366,6 +366,10 @@ assert not hook._in_messaging_gateway()
 
 # The time budget: Hermes' plugins.hook_callback_timeout. Hermes before v0.20.6 doesn't apply it, so the
 # plugin reads the setting itself.
+import hermes_cli  # noqa: E402
+
+# What `hermes` does at startup: put its source root on sys.path (v0.20.x's hermes_cli.plugins needs it).
+sys.path.insert(0, str(Path(hermes_cli.__file__).resolve().parent.parent))
 import hermes_cli.plugins as hermes_plugins  # noqa: E402
 
 settings_file = Path(os.environ["HERMES_HOME"]) / "config.yaml"
