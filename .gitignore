@@ -2,3 +2,5 @@
 config.yaml
 __pycache__/
 *.pyc
+# The desktop banner check's React stack (tests/test_desktop.mjs installs it).
+tests/node_modules/

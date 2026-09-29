@@ -46,15 +46,23 @@ export function Banner() {
   const busy = useValue(host.state.busy)
   const [open, setOpen] = useState(false)
   const [dismissed, setDismissed] = useState(null)
+  // Every turn start and end gets a query of its own, so the result is fetched the moment a turn ends.
+  // The result on screen when a turn starts belongs to an earlier message: hidden until a newer one arrives.
+  const [turn, setTurn] = useState({ busy, n: 0, earlier: null })
   const { data } = useQuery({
-    queryKey: [ID, sessionId, busy],
+    queryKey: [ID, sessionId, turn.n],
     queryFn: () => fetchLatest(sessionId),
     enabled: Boolean(sessionId),
+    staleTime: 0, // back on a chat that ran a turn meanwhile: fetch, don't serve the desktop's 60 s cache
     // ponytail: polls only while a turn runs; a push event would need a core hook-to-UI channel
     refetchInterval: busy ? 3000 : false // the SDK guide: don't poll host.request faster than a few seconds
   })
+  if (turn.busy !== busy) {
+    setTurn({ busy, n: turn.n + 1, earlier: busy ? data?.id : turn.earlier })
+  }
 
-  if (!data || data.id === dismissed || (data.status === 'running' && !busy)) {
+  const hidden = data?.status === 'skipped' || (data?.status === 'running' && !busy) // skipped: sent as typed
+  if (!data || hidden || data.id === dismissed || data.id === turn.earlier) {
     return null
   }
 
@@ -119,6 +127,8 @@ export default {
   name: 'Prompt Optimizer',
   description: 'Shows the optimized version of your last message above the composer.',
   register(ctx) {
+    // The banner follows the focused chat's turns, which the desktop reports from Hermes v0.20.2 on.
+    if (!host.state.busy || !host.state.focusedStoredSessionId) return
     ctx.register({ id: 'banner', area: COMPOSER_AREAS.top, render: () => jsx(Banner, {}) })
   }
 }
