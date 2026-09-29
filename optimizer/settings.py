@@ -65,7 +65,9 @@ SETTINGS: dict[str, Setting] = {  # same order as config.yaml.example
     "enabled": Setting("bool", "Master switch."),
     "rounds": Setting("int", "Optimized candidates per message; above 1, a judge call picks the best.", 1, MAX_ROUNDS),
     **{f"model.{k}": s for k, s in _MODEL.items()},
-    **{f"judge_model.{k}": Setting(s.kind, f"Judge override of model.{k} (rounds > 1); unset = same as model.{k}.",
+    **{f"judge_model.{k}": Setting(s.kind, f"Judge override of model.{k} (rounds > 1); unset = same as model.{k}"
+                                   + (", unless the judge sets its own provider or base_url."
+                                      if k in ("provider", "base_url", "api_key_env") else "."),
                                    s.lo, s.hi) for k, s in _MODEL.items()},
     "min_chars": Setting("int", "Shorter messages are sent untouched.", 0, 100000),
     "max_chars": Setting("int", "Longer messages are sent untouched.", 1, 100000),

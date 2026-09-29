@@ -1,14 +1,14 @@
 """Recent results per chat, read by /optimized and the desktop banner.
 
 Stored in Hermes' per-plugin data dir (<HERMES_HOME>/plugin-data/hermes-prompt-optimizer/), which
-follows the active profile and survives plugin updates and removal.
+follows the active profile and survives plugin updates and removal. The files hold your prompts, so
+only you can read them.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 from pathlib import Path
 from typing import Optional
@@ -32,31 +32,29 @@ def _session_file(session_id: str) -> Path:
 
 
 def _read_turns(path: Path) -> list:
+    """The recorded turns; a damaged file (hand edit, crash, older format) reads as the part that is intact."""
     try:
-        return json.loads(path.read_text(encoding="utf-8")).get("turns") or []
+        turns = json.loads(path.read_text(encoding="utf-8")).get("turns")
     except (OSError, ValueError, AttributeError):
         return []
+    return [t for t in turns if isinstance(t, dict)] if isinstance(turns, list) else []
 
 
 def record(entry: dict) -> None:
+    """Best effort: a history that can't be written never stops the optimizer."""
     path = _session_file(entry["session_id"])
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
+        from utils import atomic_write_text  # Hermes': unique temp file (mode 0600) + fsync + rename
+
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         turns = [t for t in _read_turns(path) if t.get("id") != entry["id"]] + [dict(entry)]
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"turns": turns[-TURNS_KEPT:]}, ensure_ascii=False), encoding="utf-8")
-        os.replace(tmp, path)
-    except OSError as exc:
+        atomic_write_text(path, json.dumps({"turns": turns[-TURNS_KEPT:]}, ensure_ascii=False))
+    except Exception as exc:
         logger.warning("%s: could not save history: %s", PLUGIN_ID, exc)
 
 
-def latest(session_id: Optional[str] = None) -> Optional[dict]:
-    if session_id:
-        path = _session_file(session_id)
-    else:
-        files = sorted(_sessions_dir().glob("*.json"), key=lambda p: p.stat().st_mtime)
-        path = files[-1] if files else None
-    turns = _read_turns(path) if path else []
+def latest(session_id: str) -> Optional[dict]:
+    turns = _read_turns(_session_file(session_id))
     return turns[-1] if turns else None
 
 

@@ -9,10 +9,14 @@ next message, without a restart.
 Run from anywhere with Hermes' Python:  ~/.hermes/hermes-agent/venv/bin/python tests/test_integration.py
 """
 
+import json
 import os
 import shutil
+import socket
 import sys
 import tempfile
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -24,13 +28,46 @@ os.environ["HERMES_HOME"] = str(HOME)
 for name in ("HERMES_SESSION_SOURCE", "HERMES_SESSION_ID"):
     os.environ.pop(name, None)  # a kanban or cron parent would make the hook skip every message
 
+received = []  # (model, max_tokens) of every request that reaches the local endpoint below
+
+
+class Endpoint(BaseHTTPRequestHandler):
+    """A local OpenAI-compatible endpoint: your main model, and the optimizer's when pointed at it."""
+
+    def log_message(self, *args):
+        pass
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        received.append((body["model"], body.get("max_tokens")))
+        reply = json.dumps({"id": "1", "object": "chat.completion", "created": 0, "model": body["model"],
+                            "choices": [{"index": 0, "finish_reason": "stop", "message": {
+                                "role": "assistant", "content": "Refactor the parser module."}}]}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(reply)))
+        self.end_headers()
+        self.wfile.write(reply)
+
+
+endpoint = ThreadingHTTPServer(("127.0.0.1", 0), Endpoint)
+threading.Thread(target=endpoint.serve_forever, daemon=True).start()
+MAIN = f"http://127.0.0.1:{endpoint.server_address[1]}/v1"
+refused = socket.socket()  # bound, never listening: connections to it are refused
+refused.bind(("127.0.0.1", 0))
+DOWN = f"http://127.0.0.1:{refused.getsockname()[1]}/v1"
+
 # The installed layout: the plugin folder, config.yaml created from the template, the plugin enabled.
 PLUGIN = HOME / "plugins" / "hermes-prompt-optimizer"
 shutil.copytree(ROOT, PLUGIN, ignore=shutil.ignore_patterns(".git", "__pycache__", "config.yaml"))
 CFG = PLUGIN / "config.yaml"
 shutil.copy(PLUGIN / "config.yaml.example", CFG)
 INSTALLED = CFG.read_bytes()
-(HOME / "config.yaml").write_text("plugins:\n  enabled:\n    - hermes-prompt-optimizer\n", encoding="utf-8")
+(HOME / "config.yaml").write_text(
+    "plugins:\n  enabled:\n    - hermes-prompt-optimizer\n"
+    f"model:\n  default: main-model\n  provider: custom:main\n  base_url: {MAIN}\n"
+    f"custom_providers:\n  - name: main\n    base_url: {MAIN}\n    api_key: main-key\n    model: main-model\n",
+    encoding="utf-8")
 
 import hermes_cli  # noqa: E402
 
@@ -58,6 +95,30 @@ def run(args=""):
 
 def saved():
     return yaml.safe_load(CFG.read_text(encoding="utf-8"))
+
+
+def optimized_json(session):
+    """Type `/optimized json <session>`: the desktop banner's feed."""
+    return json.loads(server._methods["command.dispatch"]("it", {"name": "optimized", "arg": f"json {session}"})
+                      ["result"]["output"])
+
+
+def added(session):
+    """Send a chat message through Hermes' pre_llm_call dispatch: was the optimized prompt added?"""
+    results = plugins.invoke_hook("pre_llm_call", session_id=session, conversation_history=[], model="main-model",
+                                  user_message="refactor the parser module but keep the public API", platform="desktop")
+    return any(isinstance(r, dict) and "<optimized_prompt>" in str(r.get("context")) for r in results)
+
+
+# Hermes' real model client first. Optimizer endpoint down: Hermes would retry on your main model, and
+# the plugin stops that request before it is sent (the main model gets nothing); the message goes as typed.
+assert run(f"model.base_url {DOWN}").startswith("Saved model.base_url: ")
+assert not added("real") and received == [], received
+assert "stopped Hermes from using main-model" in optimized_json("real")["error"], optimized_json("real")
+# Endpoint up: the rewrite is used, and model.max_tokens reaches the endpoint in the request body.
+assert run(f"model.base_url {MAIN}").startswith("Saved model.base_url: ")
+assert added("real") and received == [("qwen2.5:7b", 1500)], received
+assert run("reset all").startswith("Reset ") and CFG.read_bytes() == INSTALLED
 
 
 calls = []  # every model call of the last message, as Hermes' client received it
@@ -147,5 +208,7 @@ assert preview.startswith("/optimizer reset all would change:\n") and saved()["r
 assert run("reset all").startswith("Reset ") and CFG.read_bytes() == INSTALLED  # byte for byte: comments, prompts
 assert send() == ([("rewrite", "qwen2.5:7b", 0.5)], True)
 
-print("ok: all integration checks passed", file=sys.stderr)
+print("ok: all integration checks passed", file=sys.__stdout__)  # tui_gateway.server points sys.stdout at stderr
+endpoint.shutdown()
+refused.close()
 shutil.rmtree(HOME, ignore_errors=True)

@@ -13,27 +13,43 @@ from . import PLUGIN_ID
 logger = logging.getLogger(__name__)
 
 CONFIG_PATH = Path(__file__).parent.parent / "config.yaml"  # created from config.yaml.example on install
-MODEL_DEFAULTS = {"provider": "", "model": "", "base_url": "", "api_key_env": "",
-                  "temperature": 0.5, "max_tokens": 1500, "timeout": 20}
-_INT_KEYS = {"rounds": 1, "min_chars": 0, "max_chars": 6000, "context_messages": 0}
 _cache: dict = {}
 
 
 def normalize(cfg: dict) -> dict:
-    """Coerce hand-edited values so a typo degrades to a default instead of crashing every turn."""
+    """Coerce hand-edited values so a typo degrades to a default instead of breaking every turn.
+    A true/false or number setting that is missing, or that /optimizer would refuse, takes its
+    config.yaml.example value, with a warning for the invalid ones; an invalid judge_model.* one is
+    dropped, so it follows model.* as when unset. Names, URLs and prompts are used as written."""
+    from .settings import SETTINGS, ConfigError, _parse, allowed, defaults, fmt
+
     cfg = dict(cfg)
-    if isinstance(cfg.get("enabled"), str):  # `enabled: "false"` must mean off
-        cfg["enabled"] = cfg["enabled"].strip().lower() not in ("false", "no", "off", "0", "")
-    for key, default in _INT_KEYS.items():
-        try:
-            cfg[key] = int(cfg[key]) if cfg.get(key) is not None else default
-        except (TypeError, ValueError):
-            logger.warning("%s: %s must be a number, using %s", PLUGIN_ID, key, default)
-            cfg[key] = default
-    for key in ("model", "judge_model", "prompts"):
-        if not isinstance(cfg.get(key) or {}, dict):
-            logger.warning("%s: %s must be a mapping, ignoring it", PLUGIN_ID, key)
-            cfg[key] = {}
+    for section in ("model", "judge_model", "prompts"):
+        if not isinstance(cfg.get(section) or {}, dict):
+            logger.warning("%s: %s must be a mapping, ignoring it", PLUGIN_ID, section)
+            cfg[section] = {}
+        cfg[section] = dict(cfg.get(section) or {})
+    try:
+        template = defaults()
+    except ConfigError as exc:  # config.yaml.example unreadable: invalid values are dropped instead
+        logger.warning("%s: %s", PLUGIN_ID, exc)
+        template = {}
+    for key, spec in SETTINGS.items():
+        if spec.kind not in ("bool", "int", "number"):
+            continue
+        section, _, leaf = key.rpartition(".")
+        where = cfg[section] if section else cfg
+        if leaf in where:
+            try:
+                where[leaf] = _parse(key, spec, where[leaf])  # the check /optimizer applies to a new value
+                continue
+            except ConfigError:
+                use = f"model.{leaf}" if section == "judge_model" else fmt(template.get(key))
+                logger.warning("%s: %s must be %s; using %s", PLUGIN_ID, key, allowed(spec), use)
+        if section != "judge_model" and template.get(key) is not None:
+            where[leaf] = template[key]
+        else:
+            where.pop(leaf, None)
     return cfg
 
 

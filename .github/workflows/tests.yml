@@ -35,6 +35,15 @@ jobs:
             python "$t"
             echo "::endgroup::"
           done
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Desktop banner self-check
+        # The React stack Hermes' desktop app ships (apps/desktop/package.json), plus jsdom.
+        run: |
+          npm install --prefix tests --no-save --no-package-lock --no-audit --no-fund \
+            react@19.2.7 react-dom@19.2.7 @tanstack/react-query@5.101.2 jsdom@29.1.1
+          node tests/test_desktop.mjs
       - name: hermes plugins doctor
         env:
           HERMES_HOME: ${{ runner.temp }}/hermes-home
