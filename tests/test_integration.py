@@ -208,7 +208,7 @@ assert preview.startswith("/optimizer reset all would change:\n") and saved()["r
 assert run("reset all").startswith("Reset ") and CFG.read_bytes() == INSTALLED  # byte for byte: comments, prompts
 assert send() == ([("rewrite", "qwen2.5:7b", 0.5)], True)
 
-print("ok: all integration checks passed")
+print("ok: all integration checks passed", file=sys.__stdout__)  # tui_gateway.server points sys.stdout at stderr
 endpoint.shutdown()
 refused.close()
 shutil.rmtree(HOME, ignore_errors=True)

@@ -356,7 +356,7 @@ which `/optimizer reset` puts back.
 | 3     | `model.provider`                               | `""`                        | Any Hermes provider (`openrouter`, `anthropic`, `nous`, `custom:<name>`, …). Empty = your main provider. Ignored when `base_url` is set: the call goes to `base_url`.               |
 | 4     | `model.model`                                  | `qwen2.5:7b`                | Optimizer model name. Change it to a model you can reach.                                                                                                                            |
 | 5     | `model.base_url`                               | `http://127.0.0.1:11434/v1` | Any OpenAI-compatible endpoint (vLLM, Ollama, LM Studio, a proxy, …); empty = use `provider`. If it matches one of your `custom_providers`, that entry and its key are reused.        |
-| 6     | `model.api_key_env`                            | `""`                        | The _name_ of an env var holding the key. Put the secret in `~/.hermes/.env`, never in this file. Empty with a `base_url` that isn't a custom provider = a placeholder key (`no-key-required`) is sent, never a real one. |
+| 6     | `model.api_key_env`                            | `""`                        | The _name_ of an env var holding the key. Put the secret in `$HERMES_HOME/.env` (`~/.hermes/.env`, or `~/.hermes/profiles/<name>/.env` under `-p <name>`), never in this file. Empty with a `base_url` that isn't a custom provider = a placeholder key (`no-key-required`) is sent, never a real one. |
 | 7     | `model.temperature`                            | `0.5`                       | Sampling temperature, 0 to 2.                                                                                                                                                        |
 | 8     | `model.max_tokens`                             | `1500`                      | Output token limit per call, 64 to 32768 (sent as `max_completion_tokens` to OpenAI models that need it). If the endpoint rejects the limit, the call is repeated without one.       |
 | 9     | `model.timeout`                                | `20`                        | Seconds per call, 1 to 600, still bounded by the hook budget (see "Time budget" above).                                                                                              |
@@ -411,7 +411,7 @@ model:
   `hermes plugins remove hermes-prompt-optimizer` (remove alone leaves the name in
   `plugins.enabled`). Also delete `$HERMES_HOME/plugin-data/hermes-prompt-optimizer/` if you want
   the history gone, and `$HERMES_HOME/desktop-plugins/hermes-prompt-optimizer/` if the desktop
-  install dialog created it.
+  install dialog created it (then restart the desktop app).
 
 ## Troubleshooting
 

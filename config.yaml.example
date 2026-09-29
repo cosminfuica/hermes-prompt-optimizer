@@ -15,7 +15,8 @@ rounds: 1
 #   provider: auto (or empty)       → your main Hermes provider; `model` picks the model on it
 #   provider: openrouter | anthropic | nous | …  → uses the credentials Hermes already has
 #   provider: "custom:<name>"       → a named entry from custom_providers in Hermes' config.yaml
-# api_key_env = NAME of an environment variable holding the key (put the secret in ~/.hermes/.env).
+# api_key_env = NAME of an environment variable holding the key (put the secret in $HERMES_HOME/.env:
+# ~/.hermes/.env, or ~/.hermes/profiles/<name>/.env for a named profile).
 # Left empty, a base_url that matches one of your custom_providers reuses that entry's key; any
 # other base_url gets a placeholder key, never a real one (set api_key_env: OPENAI_API_KEY if it
 # needs that one).
