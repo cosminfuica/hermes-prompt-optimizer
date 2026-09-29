@@ -122,7 +122,9 @@ assert run().startswith("Prompt optimizer: off (turn it on: /optimizer on)")
 assert run("on").startswith("Saved enabled: false → true.")
 assert "model.provider is ignored while a base_url is set" in run("model.provider openrouter")
 assert "model.provider is ignored" in run("model.base_url http://127.0.0.1:8080/v1")  # either order
-assert 'To use the provider: /optimizer judge_model.base_url ""' in run("judge_model.provider anthropic")
+# A judge with a provider of its own takes none of model's endpoint keys, so model's base_url can't override it.
+assert "ignored" not in run("judge_model.provider anthropic")
+assert 'To use the provider: /optimizer judge_model.base_url ""' in run("judge_model.base_url http://10.0.0.9:8000/v1")
 assert "ignored" not in run('model.base_url ""')  # the fix the note suggests
 assert "PO_UNSET_NAME is not set" in run("model.api_key_env PO_UNSET_NAME")  # only its presence is checked
 assert "then run /reload or restart Hermes" in run("model.api_key_env PO_UNSET_OTHER")
@@ -178,5 +180,5 @@ if real_run is None:
 else:
     sys.modules["gateway.run"] = real_run
 
-print("ok: all command self-checks passed", file=sys.stderr)
+print("ok: all command self-checks passed")
 shutil.rmtree(TMP, ignore_errors=True)

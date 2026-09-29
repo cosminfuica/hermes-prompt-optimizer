@@ -263,5 +263,5 @@ assert hook.on_pre_llm_call(**turn) and seen == [1, 3], seen
 settings.set("enabled", "off", path=CFG)
 assert hook.on_pre_llm_call(**turn) is None and seen == [1, 3]  # switched off, no restart
 
-print("ok: all settings self-checks passed", file=sys.stderr)
+print("ok: all settings self-checks passed")
 shutil.rmtree(TMP, ignore_errors=True)

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from . import settings
 from .config import CONFIG_PATH
-from .engine import _secret
+from .engine import ENDPOINT_KEYS, _secret
 from .hook import _host_hook_timeout, _in_messaging_gateway
 from .settings import ConfigError, fmt
 
@@ -76,17 +76,24 @@ def _key(token: str) -> str:
 
 
 def _effective(v: dict, key: str):
-    """The value the optimizer uses: an unset judge_model.X falls back to model.X."""
-    if key.startswith("judge_model.") and v[key] is None:
-        return v["model." + key.split(".", 1)[1]]
+    """The value the optimizer uses: an unset judge_model.X falls back to model.X, except that a judge
+    with an endpoint of its own (provider or base_url) takes none of model's endpoint keys."""
+    group, _, leaf = key.partition(".")
+    if group == "judge_model" and v[key] is None:
+        own = v["judge_model.provider"] is not None or v["judge_model.base_url"] is not None
+        return None if own and leaf in ENDPOINT_KEYS else v["model." + leaf]
     return v[key]
 
 
 def _menu(path: Path) -> str:
     v = settings.get_all(path)
-    state = "on" if v["enabled"] is not False else "off (turn it on: /optimizer on)"
+    state = "on"
     if not path.exists():
         state = "idle, the settings file doesn't exist. Any change below creates it from config.yaml.example."
+    elif v["enabled"] is False:
+        state = "off (turn it on: /optimizer on)"
+    elif not v["prompts.default"]:  # the hook sends every message as typed without it
+        state = "idle, prompts.default is empty, so messages are sent as typed. Copy it back from config.yaml.example."
     lines = [f"Prompt optimizer: {state}", f"Settings file: {path}"]
     group = None
     for n, key in enumerate(MENU, 1):
@@ -107,10 +114,11 @@ def _menu(path: Path) -> str:
 def _how(key: str) -> str:
     """The ready-to-type commands for a setting: every choice when there are few, else a template."""
     spec = settings.SETTINGS[key]
+    choices: list
     if spec.kind == "bool":
         choices = ["on", "off"]
-    elif spec.kind == "int" and spec.hi - spec.lo < 10:
-        choices = range(int(spec.lo), int(spec.hi) + 1)
+    elif spec.kind == "int" and spec.hi is not None and spec.lo is not None and spec.hi - spec.lo < 10:
+        choices = list(range(int(spec.lo), int(spec.hi) + 1))
     else:
         empty = ' (or "" for empty)' if spec.kind in ("str", "url", "env") else ""
         return f"  Change it: /optimizer {key} <new value>{empty}"
@@ -132,6 +140,13 @@ def _set(key: str, raw: str, path: Path) -> str:
     return "\n".join([f"Saved {key}: {fmt(old)} → {fmt(new)}. {LIVE}", *_notes(key, settings.get_all(path))])
 
 
+def _key_present(name: str) -> bool:
+    try:
+        return bool(_secret(name))
+    except Exception:  # no readable profile scope: say "not set" rather than fail the save's reply
+        return False
+
+
 def _notes(key: str, v: dict) -> list:
     """Valid, saved, but probably not what the user wants."""
     notes = []
@@ -142,11 +157,11 @@ def _notes(key: str, v: dict) -> list:
     if leaf in ("provider", "base_url") and url and _effective(v, f"{group}.provider"):
         notes.append(f"Note: {group}.provider is ignored while a base_url is set ({fmt(url)}). "
                      f'To use the provider: /optimizer {group}.base_url ""')
-    if leaf == "api_key_env" and v[key] and not _secret(v[key]):  # presence only; the value is never shown
+    if leaf == "api_key_env" and v[key] and not _key_present(v[key]):  # presence only; never shown
         notes.append(f"Note: {v[key]} is not set in Hermes' environment. Add {v[key]}=<your key> to your Hermes .env "
                      "file, then run /reload or restart Hermes.")
     if leaf in ("rounds", "timeout"):
-        budget = _host_hook_timeout()  # Hermes abandons the hook after this; the engine stops 1.5s earlier
+        budget = _host_hook_timeout()  # Hermes abandons the hook after this; the plugin stops 1.5s earlier
         judge = float(_effective(v, "judge_model.timeout") or 20) if (v["rounds"] or 1) > 1 else 0.0
         worst = float(v["model.timeout"] or 20) + judge
         if 0 < budget < worst + 1.5:
