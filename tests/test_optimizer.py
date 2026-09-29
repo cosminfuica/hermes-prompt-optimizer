@@ -7,6 +7,7 @@ import importlib
 import importlib.util
 import json
 import os
+import re
 import shutil
 import stat
 import sys
@@ -42,7 +43,9 @@ class FakeLLM:
         self.calls.append(messages)
         if "<candidate" in messages[-1]["content"]:
             return self.verdict, "judge"
-        i = len([c for c in self.calls if "<candidate" not in c[-1]["content"]]) - 1
+        # Candidates run in parallel and arrive in any order: go by the engine's "(Variant N of M.)" note.
+        variant = re.search(r"\(Variant (\d+) of \d+\.\)$", messages[-1]["content"])
+        i = int(variant[1]) - 1 if variant else 0  # rounds=1 adds no note
         if i in self.fail:
             raise RuntimeError(f"boom {i}")
         return self.texts[i], "fake-small"
