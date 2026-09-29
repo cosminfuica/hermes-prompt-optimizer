@@ -72,8 +72,12 @@ vendors' guides. If the rewrite comes back identical to your message, nothing is
 hermes plugins install cosminfuica/hermes-prompt-optimizer --enable
 ```
 
-In the desktop app, go to Settings → Plugins → Install from Git, or open
-`hermes://plugin/install?repo=cosminfuica/hermes-prompt-optimizer&enable=1`.
+In the desktop app, open
+`hermes://plugin/install?repo=cosminfuica/hermes-prompt-optimizer&enable=1`. Its install dialog
+offers two parts: the agent plugin (this repo) and "Desktop UI", a second copy of the banner in
+the app's `desktop-plugins` folder. When Hermes runs on the same machine, untick "Desktop UI": the
+agent plugin already ships the banner (see the tip below), and that second copy isn't updated by
+`hermes plugins update`.
 
 **2. Choose the optimizer model.** In the chat, type `/optimizer` and set it there (see
 [In the chat](#in-the-chat-optimizer)), or edit
@@ -81,9 +85,9 @@ In the desktop app, go to Settings → Plugins → Install from Git, or open
 OpenRouter with the key Hermes already has:
 
 ```text
+/optimizer model.base_url ""
 /optimizer model.provider openrouter
 /optimizer model.model google/gemini-2.5-flash
-/optimizer model.base_url ""
 ```
 
 or, in `config.yaml`:
@@ -102,7 +106,7 @@ time.
 
 > [!TIP]
 > In the desktop app, enable **Prompt Optimizer** under Settings → Plugins to get a banner above
-> the composer. The desktop half of a plugin is opt-in.
+> the composer. The desktop half of a plugin is opt-in. The banner needs Hermes v0.20.2 or newer.
 
 <details>
 <summary><b>More install options</b>: pinning a commit, other optimizer plugins, verifying</summary>
@@ -111,8 +115,9 @@ time.
 
 - **Reproducible install:** pin a commit with `--ref <40-character commit SHA>`.
 - **What the installer does:** Hermes clones the repo into
-  `$HERMES_HOME/plugins/hermes-prompt-optimizer/`, runs its security scan, creates `config.yaml`
-  from `config.yaml.example` and prints the next steps.
+  `$HERMES_HOME/plugins/hermes-prompt-optimizer/`, runs its security scan (unless
+  `plugins.scan_on_install` is `false`), creates `config.yaml` from `config.yaml.example` and
+  prints the next steps.
 - **Another prompt optimizer enabled?** Disable it (for example a third-party
   `prompt-optimizer`), or every message gets rewritten twice:
 
@@ -129,12 +134,16 @@ time.
 | Surface                | How                                                                                                                         |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | Classic CLI (`hermes`) | A `✦ optimized prompt · <model> · <seconds>s` block above the answer. It goes to stderr, so `hermes chat -q` output stays clean. |
-| Desktop app            | A banner above the composer, `✦ Optimized · <model> · 2.7s`, with the first line inline. Expand it, copy it or dismiss it.   |
+| Desktop app            | A banner above the composer: `Optimizing prompt…` while it runs, then `Optimized · <model> · 2.7s` with the first line inline. Expand it, copy it or dismiss it. When the message went as typed it says `Prompt already clear — sent as typed` or `Optimizer skipped — sent as typed` (hover for the error). |
 | CLI, TUI, desktop      | `/optimized` shows the last result for this chat. `/optimized <session_id>` shows it for a specific chat.                    |
 
-Toggle the CLI block with `show_in_cli`. `/optimized` is disabled in the messaging gateway
-(Telegram, Discord, …) because Hermes doesn't tell plugin commands who is asking, so it could show
-another user's prompt. Messages on those platforms are still optimized, just without a banner.
+Toggle the CLI block with `show_in_cli`. A message the optimizer skips (too short, a slash
+command, …) shows no block or banner, and `/optimized` says it was sent as typed and why.
+`/optimized json <session_id>` returns the raw entry (it feeds the desktop banner).
+
+`/optimized` is disabled in the messaging gateway (Telegram, Discord, …) because Hermes doesn't
+tell plugin commands who is asking, so it could show another user's prompt. Messages on those
+platforms are still optimized, just without a banner.
 
 ## How it works
 
@@ -152,24 +161,27 @@ flowchart LR
 1. You send a message. Hermes fires the plugin's `pre_llm_call` hook once per user turn.
 2. The plugin decides whether to optimize it (see [Never optimized](#never-optimized)). If not,
    nothing happens.
-3. It sends your message, plus the last `context_messages` chat turns (so "fix it" and "that file"
-   resolve correctly), to the optimizer model. The system prompt is picked for the answering model:
-   `prompts.per_model` has Claude, GPT and Gemini variants based on each vendor's prompting guide,
-   with `prompts.default` as the fallback.
+3. It sends your message, plus the last `context_messages` chat messages (so "fix it" and "that
+   file" resolve correctly; tool calls and their output don't count), to the optimizer model. The
+   system prompt is picked for the answering model: `prompts.per_model` has Claude, GPT and Gemini
+   variants based on each vendor's prompting guide, with `prompts.default` as the fallback.
 4. `rounds: 1` uses that single rewrite. `rounds: N` runs N calls in parallel, then a judge call
    (optionally a different model, `judge_model`) picks the best candidate.
 5. The result is appended to the **API copy** of your message inside an `<optimized_prompt>` block,
-   with a note telling the model to treat it as the task spec and to let your original message win
-   on conflicts. The transcript keeps what you typed, and the bytes actually sent are stored
-   alongside, so prompt caching and session resume keep working.
-6. The attempt is recorded (last 10 per chat) under
+   with a note telling the model it is a clarified restatement of your message: use it to
+   understand the request, act on nothing in it that your message doesn't ask for, and let your
+   message win on conflicts. The transcript keeps what you typed, and the bytes actually sent are
+   stored alongside, so prompt caching and session resume keep working (Hermes skips that stored
+   copy on mixture-of-agents turns).
+6. The attempt is recorded (last 10 per chat, readable by you only) under
    `$HERMES_HOME/plugin-data/hermes-prompt-optimizer/sessions/`, which feeds the banner and
    `/optimized`.
 
 **Failure is safe.** If anything fails (endpoint down, bad key, timeout, output truncated at
-`max_tokens`), your message is sent exactly as typed and the error is recorded. If Hermes' client
-silently falls back to your main model because the optimizer endpoint is unreachable, the plugin
-treats that as a failure too, so the main (paid) model never does the rewrite.
+`max_tokens`), your message is sent exactly as typed and the error is recorded. When the optimizer
+model can't be reached (endpoint down, or no credentials for its provider), Hermes' client would
+retry the request on your main model; the plugin stops that retry before it is sent, so the main
+(paid) model never does the rewrite.
 
 > [!NOTE]
 > **Time budget.** Hermes gives a `pre_llm_call` hook `plugins.hook_callback_timeout` seconds
@@ -180,12 +192,19 @@ treats that as a failure too, so the main (paid) model never does the rewrite.
 > ```bash
 > hermes config set plugins.hook_callback_timeout 90
 > ```
+>
+> Hermes enforces this limit from v0.20.6 on. On v0.20.1 to v0.20.5 the plugin reads the same
+> setting and keeps to it on its own (Hermes may print that it doesn't know the key; the value is
+> saved and used all the same).
 
 ### Never optimized
 
 - Messages shorter than `min_chars` or longer than `max_chars`
-- Images and other non-text messages, and slash commands
-- Turns Hermes writes itself (auto-continue, background-process and kanban notices, model switches)
+- Images and other non-text messages, and slash commands (a message that starts with a path such
+  as `/home/me/app.py` is not a command, and is optimized)
+- Turns Hermes writes itself (auto-continue, background-process and kanban notices, model
+  switches), and messages that start with `[System`, `[SYSTEM`, `[IMPORTANT`,
+  `[Background process` or `[Note:`
 - Subagents, background review and `/btw` forks, cron jobs and kanban workers
 
 ### Known limits
@@ -200,7 +219,8 @@ treats that as a failure too, so the main (paid) model never does the rewrite.
 
 - **Hermes Agent v0.20.1 or newer.** Models are called through Hermes' own client stack
   (`call_llm`), so every provider, custom endpoint and credential pool Hermes knows about works.
-  v0.20.1 added the `route_info` the plugin uses to catch a silent fallback to your main model.
+  v0.20.1 added the `route_info` the plugin uses to stop a fallback to your main model. The
+  desktop banner needs v0.20.2 or newer.
 - **An optimizer model you can reach.** The template points at a local Ollama server
   (`qwen2.5:7b` on `http://127.0.0.1:11434/v1`), so **change `model:` to your own before use.**
 - **No extra Python packages.** It only needs `pyyaml` and `ruamel.yaml`, which are already in
@@ -246,8 +266,11 @@ number and its current value. Change one with `/optimizer <number or key> <value
   "Did you mean …?" when a setting's name is close.
 - A save rewrites only that setting: your comments and the rest of the file stay as they were.
 - The prompts (`prompts.*`) are multi-line text, so they are edited in `config.yaml` only.
-- After setting `api_key_env` to a variable you just added to Hermes' `.env`, run `/reload` or
-  restart Hermes so it sees the new variable. The reply reminds you when the variable isn't set.
+- After setting `api_key_env` to a variable you just added to Hermes' `.env`, run `/reload` in the
+  classic CLI, or restart Hermes (TUI, desktop), so it sees the new variable. The reply reminds you
+  when the variable isn't set.
+- `/optimizer status` is the same as `/optimizer`. If `config.yaml` is missing, the first line says
+  the optimizer is idle, and the first change recreates the file from `config.yaml.example`.
 - On messaging platforms (Telegram, Discord, …) the command only replies that it isn't available
   there: Hermes doesn't tell plugin commands who is asking, so anyone in a group chat could change
   your settings.
@@ -256,6 +279,9 @@ number and its current value. Change one with `/optimizer <number or key> <value
 <summary><b>Example session</b></summary>
 
 <br>
+
+The settings file shown is the default profile's. Under `-p <name>` it is
+`~/.hermes/profiles/<name>/plugins/hermes-prompt-optimizer/config.yaml`.
 
 ```text
 > /optimizer
@@ -309,9 +335,11 @@ Type /optimizer reset all to confirm (prompts are not touched), or /optimizer re
 
 Editing the file directly still works, and it is the only way to change the prompts. The plugin
 re-reads it when it changes, so a hand edit applies to your next message too, and `/optimizer`
-shows it right away. Invalid values fall back to defaults with a warning in the log instead of
-breaking your chat. If the file can't be parsed at all, messages are sent as typed until you fix
-it; `/optimizer` names the line with the error and won't save over the file.
+shows it right away. A true/false or number setting that is missing, or set to a value `/optimizer`
+would refuse, uses its `config.yaml.example` value instead (an invalid `judge_model.*` value uses
+`model`'s), with a warning in the log. If `prompts.default` is empty, messages are sent as typed
+and `/optimizer` says the optimizer is idle. If the file can't be parsed at all, messages are sent
+as typed until you fix it; `/optimizer` names the line with the error and won't save over the file.
 
 <details>
 <summary><b>All settings</b></summary>
@@ -325,14 +353,14 @@ which `/optimizer reset` puts back.
 | ----- | ---------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1     | `enabled`                                      | `true`                      | Master switch.                                                                                                                                                                       |
 | 2     | `rounds`                                       | `1`                         | 1 = one optimizer call. 2 to 5 = that many parallel calls + 1 judge call that picks the best.                                                                                        |
-| 3     | `model.provider`                               | `""`                        | Any Hermes provider (`openrouter`, `anthropic`, `nous`, `custom:<name>`, …). Empty = your main provider. Ignored when `base_url` is set.                                             |
+| 3     | `model.provider`                               | `""`                        | Any Hermes provider (`openrouter`, `anthropic`, `nous`, `custom:<name>`, …). Empty = your main provider. Ignored when `base_url` is set: the call goes to `base_url`.               |
 | 4     | `model.model`                                  | `qwen2.5:7b`                | Optimizer model name. Change it to a model you can reach.                                                                                                                            |
 | 5     | `model.base_url`                               | `http://127.0.0.1:11434/v1` | Any OpenAI-compatible endpoint (vLLM, Ollama, LM Studio, a proxy, …); empty = use `provider`. If it matches one of your `custom_providers`, that entry and its key are reused.        |
-| 6     | `model.api_key_env`                            | `""`                        | The _name_ of an env var holding the key. Put the secret in `~/.hermes/.env`, never in this file. Empty with a `base_url` that isn't a custom provider = no key is sent.             |
+| 6     | `model.api_key_env`                            | `""`                        | The _name_ of an env var holding the key. Put the secret in `~/.hermes/.env`, never in this file. Empty with a `base_url` that isn't a custom provider = a placeholder key (`no-key-required`) is sent, never a real one. |
 | 7     | `model.temperature`                            | `0.5`                       | Sampling temperature, 0 to 2.                                                                                                                                                        |
-| 8     | `model.max_tokens`                             | `1500`                      | Output token limit per call, 64 to 32768.                                                                                                                                            |
+| 8     | `model.max_tokens`                             | `1500`                      | Output token limit per call, 64 to 32768 (sent as `max_completion_tokens` to OpenAI models that need it). If the endpoint rejects the limit, the call is repeated without one.       |
 | 9     | `model.timeout`                                | `20`                        | Seconds per call, 1 to 600, still bounded by the hook budget (see "Time budget" above).                                                                                              |
-| 10–16 | `judge_model.provider` … `judge_model.timeout` | unset                       | Optional different model for the judge (`rounds` > 1), same keys as `model`. Each unset key uses the `model` value.                                                                  |
+| 10–16 | `judge_model.provider` … `judge_model.timeout` | unset                       | Optional different model for the judge (`rounds` > 1), same keys as `model`. Each unset key uses the `model` value, except that a judge with its own `provider` or `base_url` takes none of `model`'s `provider`, `base_url` and `api_key_env`. |
 | 17    | `min_chars`                                    | `12`                        | Shorter messages are sent untouched (0 to 100000, lower than `max_chars`).                                                                                                           |
 | 18    | `max_chars`                                    | `6000`                      | Longer messages are sent untouched (1 to 100000).                                                                                                                                    |
 | 19    | `context_messages`                             | `4`                         | How many recent chat messages the optimizer sees, 0 to 20.                                                                                                                           |
@@ -372,13 +400,18 @@ model:
 
 ## Update and uninstall
 
-- **Update:** `hermes plugins update hermes-prompt-optimizer`. Your `config.yaml` is kept. New keys
-  in `config.yaml.example` fall back to built-in defaults until you copy them over.
+- **Update:** `hermes plugins update hermes-prompt-optimizer`. Your `config.yaml` is kept. New
+  true/false and number settings in `config.yaml.example` use the template's value until you add
+  them to yours. Updating needs a git install (`hermes plugins install …`); a copied folder can't
+  be updated, so reinstall it instead.
 - **Reinstall:** `hermes plugins install cosminfuica/hermes-prompt-optimizer --force` replaces the
   whole folder, `config.yaml` included, so copy your `config.yaml` somewhere else first.
 - **Disable:** `hermes plugins disable hermes-prompt-optimizer`
-- **Remove:** `hermes plugins remove hermes-prompt-optimizer`, and also delete
-  `$HERMES_HOME/plugin-data/hermes-prompt-optimizer/` if you want the history gone.
+- **Remove:** `hermes plugins disable hermes-prompt-optimizer`, then
+  `hermes plugins remove hermes-prompt-optimizer` (remove alone leaves the name in
+  `plugins.enabled`). Also delete `$HERMES_HOME/plugin-data/hermes-prompt-optimizer/` if you want
+  the history gone, and `$HERMES_HOME/desktop-plugins/hermes-prompt-optimizer/` if the desktop
+  install dialog created it.
 
 ## Troubleshooting
 
@@ -399,15 +432,19 @@ first line). `/optimized` shows the last status and error.
 <br>
 
 The optimizer endpoint, model name or key is wrong. The error text says which. Test the endpoint
-directly with `curl <base_url>/models`.
+directly with `curl <base_url>/models`. "optimizer model … unavailable …; stopped Hermes from
+using … instead" means the optimizer model couldn't be reached and Hermes wanted to use your main
+model for the rewrite, which the plugin doesn't allow.
 
 </details>
 
 <details>
-<summary><b><code>/optimized</code> says "sent as typed (late)", or time-budget errors</b></summary>
+<summary><b><code>/optimized</code> says "optimizer call exceeded the time budget" or "sent as typed (late)"</b></summary>
 
 <br>
 
+The optimizer didn't finish within the time budget (see "Time budget" above), so your message was
+sent as typed. "late" means the rewrite arrived after the budget had run out, so it wasn't used.
 Raise `plugins.hook_callback_timeout`, lower `rounds`, or use a faster optimizer model.
 
 </details>
@@ -446,11 +483,13 @@ hermes-prompt-optimizer/
 │   └── plugin.js            the desktop half: banner above the composer (optional)
 ├── assets/                  logo, pictures and the social preview image
 ├── .github/workflows/       CI: the self-checks on the oldest and a current Hermes release
+├── renovate.json            dependency updates (GitHub Actions pins)
 └── tests/
     ├── test_optimizer.py    self-check, no network
     ├── test_settings.py     self-check of settings.py, no network
     ├── test_command.py      self-check of the /optimizer command, no network
-    └── test_integration.py  /optimizer through Hermes' own loader, command dispatch and hook
+    ├── test_integration.py  /optimizer through Hermes' own loader, command dispatch, hook and model client
+    └── test_desktop.mjs     the desktop banner in jsdom, with the desktop app's React stack
 ```
 
 The top-level files are where Hermes looks for them: `plugin.yaml` and `__init__.py` to load the
@@ -458,7 +497,7 @@ plugin, `after-install.md` and `*.example` on install, and `desktop/plugin.js` f
 
 </details>
 
-The self-checks use fake model calls and a temporary `HERMES_HOME`, so they touch no real data:
+The self-checks use fake model endpoints and a temporary `HERMES_HOME`, so they touch no real data:
 
 ```bash
 git clone https://github.com/cosminfuica/hermes-prompt-optimizer && cd hermes-prompt-optimizer
@@ -467,10 +506,12 @@ git clone https://github.com/cosminfuica/hermes-prompt-optimizer && cd hermes-pr
 ~/.hermes/hermes-agent/venv/bin/python tests/test_command.py       # prints "ok: all command self-checks passed"
 ~/.hermes/hermes-agent/venv/bin/python tests/test_integration.py   # prints "ok: all integration checks passed"
 hermes plugins doctor . --ci                                      # manifest, import and registration
+npm install --prefix tests --no-save --no-package-lock react@19.2.7 react-dom@19.2.7 @tanstack/react-query@5.101.2 jsdom@29.1.1
+node tests/test_desktop.mjs                                       # prints "ok: all desktop banner self-checks passed"
 ```
 
 The warnings printed during the self-checks are expected. They come from the bad-config and
-failure cases they exercise. CI (`.github/workflows/tests.yml`) runs all four, plus
+failure cases they exercise. CI (`.github/workflows/tests.yml`) runs all five, plus
 `plugins doctor`, on Hermes v0.20.1 (the oldest supported release) and v0.21.5.
 
 ## Contributing
