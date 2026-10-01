@@ -104,3 +104,7 @@ Measured on the accepted art: wall `#3F3246`, floor `#8B9A7A`. The clip's CSS sc
 | `feature-3.gif` | `/optimizer 2 3`, candidates, judge | 16.35-20.9, T 20.4 | 1320:742:110:236 | 1.1 MB | 0.02/255 |
 
 The crops keep text at about 11 px or larger at the README's 450 px column width. The first feature-1 cut caught a sliver of the rotated note at its left edge, so the crop was moved right.
+
+### Clip hosting
+
+The README embeds the clip from GitHub as `https://github.com/user-attachments/assets/03b4b68f-9511-4e74-ac79-d30c8a23a22c` (the inline-player form). The in-repo `demo.mp4` and `demo-poster.jpg` were removed once it was uploaded, because Hermes installs plugins by cloning the repo. Both remain in git history at commit `6212276`.
