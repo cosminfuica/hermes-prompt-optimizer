@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 # The desktop banner check's React stack (tests/test_desktop.mjs installs it).
 tests/node_modules/
+# /brag renders and the Hyperframes composition behind the README demo clip.
+brag-output/
