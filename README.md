@@ -23,7 +23,7 @@
     <a href="#contributing"><b>Contributing</b></a>
   </p>
 
-  https://github.com/user-attachments/assets/03b4b68f-9511-4e74-ac79-d30c8a23a22c
+  https://github.com/user-attachments/assets/14944e57-ec38-4a20-9dad-3906395ed74e
 
 </div>
 
