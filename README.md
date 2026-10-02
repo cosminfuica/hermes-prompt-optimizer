@@ -125,7 +125,7 @@ Hermes calls the plugin's `pre_llm_call` hook once per message. The plugin sends
 <details>
 <summary><b>Where do I see what was sent?</b></summary>
 
-In the classic CLI the optimized prompt prints above the answer, on stderr, so `hermes chat -q` output stays clean (`show_in_cli: false` turns it off). In the desktop app, enable Prompt Optimizer under Settings > Plugins for a banner above the composer that you can expand, copy or dismiss. In the CLI, the TUI and the desktop app, `/optimized` shows the last result for the chat.
+In the classic CLI the optimized prompt prints above the answer, on stderr, so `hermes chat -q` output stays clean (`show_in_cli: false` turns it off). In the desktop app, enable Prompt Optimizer under Capabilities → Plugins (Settings → Plugins before v0.21.2) for a banner above the composer that you can expand, copy or dismiss. In the CLI, the TUI and the desktop app, `/optimized` shows the last result for the chat.
 
 </details>
 
@@ -139,7 +139,7 @@ Your message is sent exactly as typed, and the error is recorded for `/optimized
 <details>
 <summary><b>Can I install it from the desktop app, pin a version, or remove it?</b></summary>
 
-- Desktop app: open `hermes://plugin/install?repo=cosminfuica/hermes-prompt-optimizer&enable=1`. When Hermes runs on the same machine, untick "Desktop UI": the agent plugin already ships the banner.
+- Desktop app (v0.20.5+): open `hermes://plugin/install?repo=cosminfuica/hermes-prompt-optimizer&enable=1` and leave "Desktop UI" ticked. The one exception: on desktop v0.20.5 to v0.21.1 with Hermes on the same machine, untick it, because the agent plugin already ships the banner.
 - A named profile: add `-p <profile>`. A pinned commit: add `--ref <commit SHA>`.
 - Update with `hermes plugins update hermes-prompt-optimizer`; your `config.yaml` is kept.
 - Remove with `hermes plugins disable hermes-prompt-optimizer`, then `hermes plugins remove hermes-prompt-optimizer`.
@@ -157,10 +157,12 @@ A `pre_llm_call` hook can only add context, so your main model sees your origina
 
 ```bash
 git clone https://github.com/cosminfuica/hermes-prompt-optimizer && cd hermes-prompt-optimizer
-for t in tests/test_*.py; do ~/.hermes/hermes-agent/venv/bin/python "$t"; done   # Hermes' own Python
+git clone --depth 1 --branch v2026.9.24 https://github.com/NousResearch/hermes-agent ../hermes-agent   # Hermes v0.21.5
+(cd ../hermes-agent && uv sync --locked)
+for t in tests/test_*.py; do ../hermes-agent/.venv/bin/python "$t"; done
+HERMES_HOME="$(mktemp -d)" ../hermes-agent/.venv/bin/hermes plugins doctor . --ci
 npm install --prefix tests --no-save --no-package-lock react@19.2.7 react-dom@19.2.7 @tanstack/react-query@5.101.2 jsdom@29.1.1
 node tests/test_desktop.mjs
-hermes plugins doctor . --ci
 ```
 
 Found a bug or want a feature? [Open an issue](https://github.com/cosminfuica/hermes-prompt-optimizer/issues). Pull requests are welcome too: CI runs these checks on Hermes v0.20.1, the oldest supported release, and on v0.21.5.
