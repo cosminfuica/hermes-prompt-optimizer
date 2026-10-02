@@ -107,4 +107,4 @@ The crops keep text at about 11 px or larger at the README's 450 px column width
 
 ### Clip hosting
 
-The README embeds the clip from GitHub as `https://github.com/user-attachments/assets/03b4b68f-9511-4e74-ac79-d30c8a23a22c` (the inline-player form). The in-repo `demo.mp4` and `demo-poster.jpg` were removed once it was uploaded, because Hermes installs plugins by cloning the repo. Both remain in git history at commit `6212276`.
+The README embeds the clip from GitHub as `https://github.com/user-attachments/assets/14944e57-ec38-4a20-9dad-3906395ed74e` (the inline-player form; the first upload, `03b4b68f-…`, now returns 404). The in-repo `demo.mp4` and `demo-poster.jpg` were removed once it was uploaded, because Hermes installs plugins by cloning the repo. Both remain in git history at commit `6212276`, on PR #7's branch (not main).
