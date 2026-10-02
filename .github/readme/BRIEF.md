@@ -7,7 +7,7 @@ Read this before generating any README asset. Every Higgsfield prompt starts wit
 - **Name:** Hermes is the messenger: the plugin sits on the road between your message and your model. The existing mascot is a ghost, a ghostwriter that rewrites your words without taking your name off them.
 - **Job in the user's world:** a mail clerk who takes your scribbled, crumpled note and copies it onto a crisp card before it goes out, with your original still attached ("your message wins if the two conflict").
 - **Voice:** plain, careful, unfussy. Sources: "You type the way you always do." (old README), "Fails safe." (old README), "Every detail survives" (old README), "never rewritten by the main model instead" (`config.yaml.example`).
-- **Existing brand:** `assets/logo.webp` (cream ghost, wavy lavender hem, two oval lavender eyes, small smile, on sage), `assets/banner.webp` (crumpled scribbled note, ghost, tidy card), `assets/desk.webp` (the ghost as a matte figure on a sunny desk). Measured colors: sage `#8FA586`, cream `#FBF6EC`, lavender `#B48EE9`; old badge violet `#7B5CC4`; old title plum `#3F3354`.
+- **Existing brand** (these files were removed later, see [Removed files](#removed-files)): `assets/logo.webp` (cream ghost, wavy lavender hem, two oval lavender eyes, small smile, on sage), `assets/banner.webp` (crumpled scribbled note, ghost, tidy card), `assets/desk.webp` (the ghost as a matte figure on a sunny desk). Measured colors: sage `#8FA586`, cream `#FBF6EC`, lavender `#B48EE9`; old badge violet `#7B5CC4`; old title plum `#3F3354`.
 - **Visual references:**
   - `refs/ref-1-logo.png` (from `assets/logo.webp`): keep the ghost's exact silhouette and face, no arms or feet, matte finish.
   - `refs/ref-2-banner.png` (from `assets/banner.webp`): keep the props (crumpled scribbled note, tidy card) and the sage ground.
@@ -107,4 +107,8 @@ The crops keep text at about 11 px or larger at the README's 450 px column width
 
 ### Clip hosting
 
-The README embeds the clip from GitHub as `https://github.com/user-attachments/assets/14944e57-ec38-4a20-9dad-3906395ed74e` (the inline-player form; the first upload, `03b4b68f-…`, now returns 404). The in-repo `demo.mp4` and `demo-poster.jpg` were removed once it was uploaded, because Hermes installs plugins by cloning the repo. Both remain in git history at commit `6212276`, on PR #7's branch (not main).
+The README embeds the clip from GitHub as `https://github.com/user-attachments/assets/14944e57-ec38-4a20-9dad-3906395ed74e` (the inline-player form; the first upload, `03b4b68f-…`, now returns 404). The in-repo `demo.mp4` and `demo-poster.jpg` were removed once it was uploaded, because Hermes installs plugins by cloning the repo. Both remain in git history at commit `6212276`, outside main. PR #7's branch is deleted, so fetch it with `git fetch origin pull/7/head`.
+
+## Removed files
+
+Only the old README used `assets/`, so it was removed after the redesign: `logo.webp` (8 KB), `banner.webp` (27 KB), `desk.webp` (37 KB) and `social-preview.png` (323 KB, 1280x640, never set as the repo's social preview). They stay in git history. Restore one from the commit before the removal: `git checkout bee80e3 -- assets/logo.webp`.
