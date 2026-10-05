@@ -9,14 +9,21 @@
   <p>
     <a href="https://github.com/cosminfuica/hermes-prompt-optimizer/stargazers"><img src="https://img.shields.io/github/stars/cosminfuica/hermes-prompt-optimizer?style=social" alt="Stars"></a>
     &nbsp;
-    <a href="plugin.yaml"><img src="https://img.shields.io/badge/version-1.0.1-blue" alt="Version"></a>
+    <a href="plugin.yaml"><img src="https://img.shields.io/static/v1?label=version&message=1.0.1&color=blue" alt="Version"></a>
     &nbsp;
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/static/v1?label=license&message=MIT&color=green" alt="MIT"></a>
     &nbsp;
     <a href="https://github.com/cosminfuica/hermes-prompt-optimizer/actions/workflows/tests.yml"><img src="https://github.com/cosminfuica/hermes-prompt-optimizer/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
   </p>
 
   <p>
+    <a href="#quick-start"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/cta-start-dark.svg"><img src=".github/readme/cta-start-light.svg" alt="Get started" height="44"></picture></a>
+    &nbsp;
+    <a href="https://github.com/user-attachments/assets/14944e57-ec38-4a20-9dad-3906395ed74e"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/cta-demo-dark.svg"><img src=".github/readme/cta-demo-light.svg" alt="Watch the demo" height="44"></picture></a>
+  </p>
+
+  <p>
+    <a href="#how-it-works"><b>How it works</b></a> &middot;
     <a href="#quick-start"><b>Quick start</b></a> &middot;
     <a href="#commands"><b>Commands</b></a> &middot;
     <a href="#configuration"><b>Configuration</b></a> &middot;
@@ -25,35 +32,34 @@
 
   https://github.com/user-attachments/assets/14944e57-ec38-4a20-9dad-3906395ed74e
 
+  <p align="center">
+    <picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/spec-1-dark.svg"><img src=".github/readme/spec-1-light.svg" alt="Install: hermes plugins install cosminfuica/hermes-prompt-optimizer" width="25%"></picture><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/spec-2-dark.svg"><img src=".github/readme/spec-2-light.svg" alt="Requires: Hermes Agent v0.20.1 or newer" width="25%"></picture><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/spec-3-dark.svg"><img src=".github/readme/spec-3-light.svg" alt="Runs in: CLI, TUI and the desktop app" width="25%"></picture><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/spec-4-dark.svg"><img src=".github/readme/spec-4-light.svg" alt="Optimizer model: any Hermes provider or OpenAI-style URL" width="25%"></picture>
+    <picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/spec-5-dark.svg"><img src=".github/readme/spec-5-light.svg" alt="Reads: your message and 4 recent chat messages" width="25%"></picture><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/spec-6-dark.svg"><img src=".github/readme/spec-6-light.svg" alt="Writes: one context block beside your message" width="25%"></picture><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/spec-7-dark.svg"><img src=".github/readme/spec-7-light.svg" alt="Dependencies: 0 extra Python packages" width="25%"></picture><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/spec-8-dark.svg"><img src=".github/readme/spec-8-light.svg" alt="License: MIT" width="25%"></picture>
+  </p>
 </div>
 
----
+<picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/rule-dark.svg"><img src=".github/readme/rule-light.svg" alt="" width="100%"></picture>
 
-<table>
-<tr>
-<td width="55%"><img src=".github/readme/feature-1.gif" alt="The optimized prompt prints line by line: a task block and a constraints block rewritten from a quick lowercase message"></td>
-<td width="45%">
-<h3>Type fast and still send a clear prompt</h3>
-A small model of your choice rewrites each message before your Hermes model answers it. Claude, GPT and Gemini each get a rewrite shaped by their vendor's prompting guide.
-</td>
-</tr>
-<tr>
-<td width="45%">
-<h3>Your own words stay in charge</h3>
-The rewrite rides next to your message in an <code>&lt;optimized_prompt&gt;</code> block, and your message wins any conflict. If the optimizer fails or runs late, your message is sent exactly as typed.
-</td>
-<td width="55%"><img src=".github/readme/feature-2.gif" alt="The typed message stays as it is while the optimized prompt clips on beneath it; when the optimizer fails, a banner reads Optimizer skipped, sent as typed"></td>
-</tr>
-<tr>
-<td width="55%"><img src=".github/readme/feature-3.gif" alt="Typing /optimizer 2 3 saves rounds 1 to 3; three candidate rewrites appear and a judge picks the second"></td>
-<td width="45%">
-<h3>Change settings without leaving the chat</h3>
-Type <code>/optimizer</code> for a numbered list of every setting, and change one by its number or name. Set rounds to 3 and three rewrites run in parallel while a judge picks the best, from your very next message.
-</td>
-</tr>
-</table>
+<p align="center">
+  <picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/tile-preview-dark.webp"><img src=".github/readme/tile-preview-light.webp" alt="A chat, start to finish: the rewrite, the settings menu and best-of-3, typed live" width="66%"></picture><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/tile-stack-1-2-dark.webp"><img src=".github/readme/tile-stack-1-2-light.webp" alt="Type fast, send a clear prompt: A small model rewrites your message before Hermes answers it. Your own words stay in charge: The transcript keeps what you typed; it wins any conflict" width="33%"></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/tile-feature-3-dark.webp"><img src=".github/readme/tile-feature-3-light.webp" alt="Fails safe, sent as typed: A down or slow optimizer never reroutes to your main model" width="33%"></picture><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/tile-feature-4-dark.webp"><img src=".github/readme/tile-feature-4-light.webp" alt="Shaped for Claude, GPT, Gemini: Each vendor's prompting guide shapes the prompt for the model that answers" width="33%"></picture><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/tile-feature-5-dark.webp"><img src=".github/readme/tile-feature-5-light.webp" alt="See what was sent, any time: /optimized in the CLI and TUI; a banner in the desktop app" width="33%"></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/tile-code-dark.webp"><img src=".github/readme/tile-code-light.webp" alt="One command installs it: hermes plugins install cosminfuica/hermes-prompt-optimizer --enable, typed live with its output" width="66%"></picture><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/tile-list-dark.webp"><img src=".github/readme/tile-list-light.webp" alt="Runs the rewrite on OpenRouter, Anthropic, Nous Portal, Ollama, LM Studio or any OpenAI-style URL" width="33%"></picture>
+</p>
 
----
+<picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/rule-dark.svg"><img src=".github/readme/rule-light.svg" alt="" width="100%"></picture>
+
+## How it works
+
+```mermaid
+flowchart LR
+  A[your message] --> B[pre_llm_call hook]
+  B --> C[N optimizer calls, in parallel]
+  C --> D[judge picks one, when rounds is above 1]
+  D --> E[optimized_prompt block beside your message]
+  E --> F[your Hermes model]
+```
+
+Hermes calls the plugin's `pre_llm_call` hook once per message. The hook can only add context, so the transcript keeps your words and the rewrite rides on the API copy of your message. Every model call goes through Hermes' own client, so each provider, custom endpoint and credential Hermes already knows works unchanged.
 
 ## Quick start
 
@@ -68,12 +74,13 @@ Saved model.provider: "" → "openrouter". Applies from your next message, no re
 Saved model.model: "qwen2.5:7b" → "google/gemini-2.5-flash". Applies from your next message, no restart needed.
 ```
 
-Now send any message of 12 or more characters: the optimized prompt prints above the answer, and `/optimized` shows it again.
+> [!TIP]
+> Now send any message of 12 or more characters: the optimized prompt prints above the answer, and `/optimized` shows it again. Running Ollama locally? Skip the three settings: the template already points at `qwen2.5:7b` on `http://127.0.0.1:11434/v1`.
 
 ## Commands
 
 | Command | What it does |
-|------------|--------------|
+|---------|--------------|
 | `/optimized` | Show the last optimized prompt for this chat, or why the message was sent as typed |
 | `/optimizer` | List every setting, numbered, with its current value |
 | `/optimizer <number or key> <value>` | Check and save one setting; it applies from your next message, no restart |
@@ -125,7 +132,7 @@ Hermes calls the plugin's `pre_llm_call` hook once per message. The plugin sends
 <details>
 <summary><b>Where do I see what was sent?</b></summary>
 
-In the classic CLI the optimized prompt prints above the answer, on stderr, so `hermes chat -q` output stays clean (`show_in_cli: false` turns it off). In the desktop app, enable Prompt Optimizer under Capabilities → Plugins (Settings → Plugins before v0.21.2) for a banner above the composer that you can expand, copy or dismiss. In the CLI, the TUI and the desktop app, `/optimized` shows the last result for the chat.
+In the classic CLI the optimized prompt prints above the answer, on stderr, so `hermes chat -q` output stays clean (`show_in_cli: false` turns it off). In the desktop app, enable Prompt Optimizer under Capabilities > Plugins (Settings > Plugins before v0.21.2) for a banner above the composer that you can expand, copy or dismiss. In the CLI, the TUI and the desktop app, `/optimized` shows the last result for the chat.
 
 </details>
 
@@ -167,6 +174,16 @@ node tests/test_desktop.mjs
 
 Found a bug or want a feature? [Open an issue](https://github.com/cosminfuica/hermes-prompt-optimizer/issues). Pull requests are welcome too: CI runs these checks on Hermes v0.20.1, the oldest supported release, and on v0.21.5.
 
+<picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/contribute-dark.svg"><img src=".github/readme/contribute-light.svg" alt="Contributions are open" width="100%"></picture>
+
 ## License
 
 MIT - see [LICENSE](LICENSE).
+
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/readme/outro-dark.svg">
+    <img src=".github/readme/outro-light.svg" alt="hermes plugins install cosminfuica/hermes-prompt-optimizer --enable" width="100%">
+  </picture>
+  <p><a href="#readme">Back to top</a></p>
+</div>
