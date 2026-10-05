@@ -20,7 +20,7 @@ hermes-prompt-optimizer/  # the repo root IS the plugin package; Hermes clones i
 ├── desktop/plugin.js     # composer banner, loaded as-is by the desktop app
 ├── tests/                # self-check scripts (own AGENTS.md)
 ├── .github/workflows/    # CI on the oldest supported and a current Hermes release
-└── .github/readme/       # README banners and GIFs; BRIEF.md is the art-direction log
+└── .github/readme/       # README banner, cards and animated tiles; BRIEF.md is the art-direction log
 ```
 
 ## WHERE TO LOOK
